@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gym & Ernährung Tracker</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
+    h1 { text-align: center; }
+    .section { background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    label { display: block; margin-top: 10px; }
+    input, textarea, select { width: 100%; padding: 5px; margin-top: 5px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #eee; }
+    .nav { display: flex; justify-content: space-between; align-items: center; }
+    .goals { display: flex; justify-content: space-around; margin-top: 10px; }
+    .goal-box { background: #fafafa; padding: 10px; border-radius: 6px; text-align: center; width: 22%; }
+  </style>
+</head>
+<body>
+  <h1>Gym & Ernährung Tracker</h1>
+
+  <div class="section nav">
+    <button onclick="changeDate(-1)">← Vorheriger Tag</button>
+    <input type="date" id="currentDate" onchange="loadDay()" />
+    <button onclick="changeDate(1)">Nächster Tag →</button>
+  </div>
+
+  <div class="section">
+    <h2>Tages-Trainingsplan</h2>
+    <div id="workoutPlan"></div>
+    <h3>Trainings-Logs</h3>
+    <textarea id="workoutLog" placeholder="Was hast du trainiert?"></textarea>
+    <button onclick="saveWorkout()">Speichern</button>
+    <div id="savedWorkout"></div>
+  </div>
+
+  <div class="section">
+    <h2>Ernährung</h2>
+    <div class="goals">
+      <div class="goal-box"><b>Kalorien</b><br>2700 kcal</div>
+      <div class="goal-box"><b>Protein</b><br>170 g</div>
+      <div class="goal-box"><b>Kohlenhydrate</b><br>300 g</div>
+      <div class="goal-box"><b>Fett</b><br>85 g</div>
+    </div>
+    <h3>Mahlzeiten-Log</h3>
+    <textarea id="mealLog" placeholder="Mahlzeiten + Nährwerte"></textarea>
+    <button onclick="saveMeals()">Speichern</button>
+    <div id="savedMeals"></div>
+  </div>
+
+  <div class="section">
+    <h2>Daten sichern</h2>
+    <button onclick="exportData()">Exportieren</button>
+    <input type="file" id="importFile" />
+    <button onclick="importData()">Importieren</button>
+  </div>
+
+<script>
+  const trainingPlan = {
+    "Montag": ["Bankdrücken 4x8", "Rudern LH 4x8", "Schulterdrücken KH 3x10", "Klimmzüge 3x8", "Core: Planks 3x60s", "Stretching: Brustöffnung, Schulter, Hüftbeuger"],
+    "Dienstag": ["Kniebeugen 4x8", "Rumänisches Kreuzheben 4x8", "Wadenheben 4x15", "Beinpresse 3x12", "Box Jumps 4x10", "Stretching: Hamstrings, Hüfte, Waden"],
+    "Mittwoch": ["Dips 3x10", "Klimmzüge 3x8", "Face Pulls 3x12", "Seitheben 3x12", "Liegestütze explosiv 3x15", "Stretching: Brust, Rücken, Schulter"],
+    "Donnerstag": ["Bulgarian Split Squats 3x10", "Beinbeuger Maschine 3x12", "Hip Thrusts 3x12", "Ab Wheel 3x12", "Side Plank 3x45s", "Stretching: Hüfte, Quads, Bauch"],
+    "Freitag": ["Bankdrücken 4x6", "Kniebeugen 4x6", "Kreuzheben 3x5", "Military Press 3x8", "Klimmzüge AMRAP", "Bizepscurls 3x10", "Trizeps Pushdowns 3x12", "Stretching: Ganzkörper"],
+    "Samstag": ["Foam Rolling", "Yoga Flow 20-30min", "Core-Übungen: Bird-Dog, Dead Bug, Side Plank", "Stretching: Ganzkörper"],
+    "Sonntag": ["Frei / Regeneration"]
+  };
+
+  function getDayName(date) {
+    return date.toLocaleDateString("de-DE", { weekday: 'long' });
+  }
+
+  function loadDay() {
+    let date = new Date(document.getElementById("currentDate").value);
+    let dayName = getDayName(date);
+    document.getElementById("workoutPlan").innerHTML = "<ul>" + trainingPlan[dayName].map(e => "<li>" + e + "</li>").join("") + "</ul>";
+
+    let data = JSON.parse(localStorage.getItem("trackerData") || "{}");
+    let key = document.getElementById("currentDate").value;
+    document.getElementById("savedWorkout").innerText = data[key]?.workout || "";
+    document.getElementById("savedMeals").innerText = data[key]?.meals || "";
+  }
+
+  function saveWorkout() {
+    let date = document.getElementById("currentDate").value;
+    let data = JSON.parse(localStorage.getItem("trackerData") || "{}");
+    if (!data[date]) data[date] = {};
+    data[date].workout = document.getElementById("workoutLog").value;
+    localStorage.setItem("trackerData", JSON.stringify(data));
+    loadDay();
+  }
+
+  function saveMeals() {
+    let date = document.getElementById("currentDate").value;
+    let data = JSON.parse(localStorage.getItem("trackerData") || "{}");
+    if (!data[date]) data[date] = {};
+    data[date].meals = document.getElementById("mealLog").value;
+    localStorage.setItem("trackerData", JSON.stringify(data));
+    loadDay();
+  }
+
+  function changeDate(offset) {
+    let input = document.getElementById("currentDate");
+    let date = new Date(input.value);
+    date.setDate(date.getDate() + offset);
+    input.valueAsDate = date;
+    loadDay();
+  }
+
+  function exportData() {
+    let data = localStorage.getItem("trackerData");
+    let blob = new Blob([data], {type: "application/json"});
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement("a");
+    a.href = url;
+    a.download = "trackerData.json";
+    a.click();
+  }
+
+  function importData() {
+    let file = document.getElementById("importFile").files[0];
+    let reader = new FileReader();
+    reader.onload = function() {
+      localStorage.setItem("trackerData", reader.result);
+      loadDay();
+    };
+    reader.readAsText(file);
+  }
+
+  // Initial setzen
+  window.onload = () => {
+    let today = new Date();
+    document.getElementById("currentDate").valueAsDate = today;
+    loadDay();
+  }
+</script>
+</body>
+</html>
